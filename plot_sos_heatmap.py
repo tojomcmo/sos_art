@@ -32,28 +32,38 @@ def create_dyn_sys(w_n, z):
 
     return tf_msd
 
+# def create_time_phase_damp_arrays(h_res, a_ratio, ):
 
-iter = 250
-time_samples = 1000
+def plot_sos_heatmap(mag_set, phase_set, imp_set, color_map, interp):
+    plt.subplot(3,1,1)
+    plt.imshow(mag_set, cmap = color_map, interpolation = interp)
+    plt.axis('off')
+    plt.subplot(3,1,2)
+    plt.imshow(phase_set, cmap = color_map, interpolation = interp)
+    plt.axis('off')
+    plt.subplot(3,1,3)
+    plt.imshow(imp_set, cmap = color_map, interpolation = interp)
+    plt.axis('off')
+    plt.show()
+
+
+
+iter = 200
+time_samples =1000
 freq_samples = 1000
 
-w_n = 10
-t_lin     = np.linspace(0, 9.5/w_n, time_samples)
+w_n = 1
+t_lin     = np.linspace(0, np.pi*3/w_n, time_samples)
 w_lin     = np.linspace(0, w_n*2 , freq_samples)
 t_array   = np.array([t_lin])
 w_array   = np.array([w_lin])
 
-x0        = 0
 z_vec     = np.linspace(0.09,1, num = iter)
-
-mag_set   = []
-phase_set = []
-imp_set   = []
 
 for idx, z in enumerate(z_vec):
     tf_msd        = create_dyn_sys(w_n, z)
-    w, mag, phase = signal.bode(tf_msd, w_lin)
-    t, imp        = signal.impulse2(tf_msd, x0, t_lin)
+    _, mag, phase = signal.bode(tf_msd, w_lin)
+    _, imp        = signal.impulse2(tf_msd, X0 = None, T = t_lin)
     mag   = np.array([mag-mag[0]])
     phase = np.array([phase])
     imp   = np.array([imp])
@@ -66,22 +76,7 @@ for idx, z in enumerate(z_vec):
         phase_set = np.append(phase_set, phase, axis=0) 
         imp_set   = np.append(imp_set,   imp,   axis=0) 
 
-print(mag_set.shape)
+color_map = 'RdBu'
+interp = 'bicubic'
 
-id = 99
-cmap = 'RdYlBu'
-cmap = 'RdBu'
-
-
-plt.subplot(3,1,1)
-plt.imshow(mag_set, cmap, interpolation='nearest')
-plt.axis('off')
-plt.subplot(3,1,2)
-plt.imshow(phase_set, cmap, interpolation='nearest')
-plt.axis('off')
-plt.subplot(3,1,3)
-plt.imshow(imp_set, cmap, interpolation='nearest')
-plt.axis('off')
-
-plt.show()
-
+plot_sos_heatmap(mag_set, phase_set, imp_set, color_map, interp)
