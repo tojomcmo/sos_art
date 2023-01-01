@@ -7,34 +7,38 @@ from scipy.signal import bode as bode
 
 
 
-# second order system transfer function
-# w_n - natural undamped frequency
-# z   - damping coefficient
-# w_d  = w_n * sqrt(1 - z^2) 
-# H(s) = (w_n^2) / (s^2 + 2*z*w_n*s + w_n^2)
-
-# spring mass damper: H(s) = 1/ (s^2 + (b/m)*s + (k/m)
-# w_n = sqrt(k/m)
-# z   = (b/m) / (2*sqrt(k/m))
-
-# define m as m, w_n as w_n, z as z
-# k = m * w_n^2
-# b = 2 * z * w_n * m
-
+###### --- Functions --- #####
 
 def create_dyn_sys(z):
-
-    k   = 1
-    b   = 2 * z
-    Num    = [1]
-    Den    = [1, b, k]
+#   generates a second order transfer function of a linear mass spring damper system of unit mass and spring constant, given damping coefficient
+#
+#   mass spring damper TF: H(s) = 1 / (m*s^2 + b*s + k)
+#   w_n = sqrt(k/m) 
+#   z   = b / (2*sqrt(km))
+#
+#   define m as 1, w_n as 1, z as input
+#   m = 1
+#   k = m * w_n^2 = 1
+#   b = 2 * z sqrt(w_n * m) = 2 * z
+    m    = 1
+    k    = 1
+    b    = 2 * z
+    Num  = [1]
+    Den  = [m, b, k]
     tf_msd = signal.TransferFunction(Num, Den)
 
     return tf_msd
 
-def create_time_phase_damp_linspaces(h_res, v_res, num_oscillations, damping_coeff_limits):
+def create_time_phase_damp_linspaces(h_res:int, v_ratio, num_oscillations:int, freq_limits:tuple, damping_coeff_limits:tuple):
+    # creates sample linspaces for system responses
+    # h_res[in]                = total horizontal resolution, int, used for sample time and freq linspace index lengths
+    # v_res[in]                = total vertical resolution, int, used for damping coefficient linspace index length
+    # num_oscillations[in]     = number of characteristic oscillations in impulse response, sets end time of impulse response 
+    # freq_limits[in]
+    # damping_coeff_limits[in] = damping coefficient limits, sets start and end of damping coefficients
+    v_res     = int(np.floor(h_res / v_ratio))
     t_lin     = np.linspace(0, 2 * np.pi * num_oscillations , h_res)
-    w_lin     = np.linspace(0, 2, h_res)
+    w_lin     = np.linspace(freq_limits[0], freq_limits[1], h_res)
     z_lin     = np.linspace(damping_coeff_limits[0],damping_coeff_limits[1], v_res)
     return t_lin, w_lin, z_lin
 
@@ -48,19 +52,25 @@ def generate_mag_phase_imp_arrays(tf, t_lin, w_lin):
 
 def plot_sos_heatmap(mag_set, phase_set, imp_set, color_map, interp, zero_centered = False):
     plt.subplot(3,1,1)
-    plt.imshow(mag_set, cmap = color_map, interpolation = interp)
+    if(zero_centered==False):
+        plt.imshow(mag_set, cmap = color_map, interpolation = interp)
+    elif(zero_centered==True):
+        c_scale = np.max(np.abs(mag_set))
+        plt.imshow(mag_set, cmap = color_map, interpolation = interp, vmin = -c_scale, vmax = c_scale)  
     plt.axis('off')
     plt.subplot(3,1,2)
-    plt.imshow(phase_set, cmap = color_map, interpolation = interp)
+    if(zero_centered==False):
+        plt.imshow(phase_set, cmap = color_map, interpolation = interp)
+    elif(zero_centered==True):
+        c_scale = np.max(np.abs(phase_set + 90))
+        plt.imshow(phase_set + 90, cmap = color_map, interpolation = interp, vmin = -c_scale, vmax = c_scale)  
     plt.axis('off')
     plt.subplot(3,1,3)
     if(zero_centered==False):
         plt.imshow(imp_set, cmap = color_map, interpolation = interp)
     elif(zero_centered==True):
-        c_scale = np.max(imp_set)
-        plt.imshow(imp_set, cmap = color_map, interpolation = interp, vmin = -c_scale, vmax = c_scale)  
-    else:
-        Exception(ValueError, 'incorrect zero_center type, ust be True or False')      
+        c_scale = np.max(np.abs(imp_set))
+        plt.imshow(imp_set, cmap = color_map, interpolation = interp, vmin = -c_scale, vmax = c_scale)       
     plt.axis('off')
     plt.show()
 
@@ -80,15 +90,21 @@ def plot_all_line_graph(mag_set, phase_set, imp_set, w_lin, t_lin, idx):
     plt.plot(t_lin.T, imp_set[idx])
     plt.show()
 
+
+##### --- Parameters --- #####
+
 h_res                = 1000
-v_res                = 250
-num_oscillations     = 1.45
-damping_coeff_limits = (0.09, 1)
+v_ratio              = 5
+num_oscillations     = 3
+freq_limits          = (0, 2.9)
+damping_coeff_limits = (0.08, 1)
 color_map            = 'RdBu'
 interp               = 'bicubic'
 zero_centered_imp    = False
 
-t_lin, w_lin, z_lin  = create_time_phase_damp_linspaces(h_res, v_res, num_oscillations, damping_coeff_limits) 
+##### --- Maths --- #####
+
+t_lin, w_lin, z_lin  = create_time_phase_damp_linspaces(h_res, v_ratio, num_oscillations, freq_limits, damping_coeff_limits) 
 
 for idx, z in enumerate(z_lin):
     tf_msd          = create_dyn_sys(z)
@@ -101,6 +117,8 @@ for idx, z in enumerate(z_lin):
         mag_set   = np.append(mag_set,   mag,   axis=0) 
         phase_set = np.append(phase_set, phase, axis=0) 
         imp_set   = np.append(imp_set,   imp,   axis=0) 
+
+##### --- Plotting --- #####
 
 plot_sos_heatmap(mag_set, phase_set, imp_set, color_map, interp, zero_centered = zero_centered_imp)
 # plot_all_line_graph(mag_set, phase_set, imp_set, w_lin, t_lin, 0)
