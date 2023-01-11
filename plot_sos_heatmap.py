@@ -6,6 +6,47 @@ from scipy.signal import impulse as impulseResponse
 from scipy.signal import bode as bode
 import control as control
 
+class art_definitions(object):
+
+    def __init__(self, figure_size = (12,10), color_map = 'RdBu', interp_type = 'bicubic', pane_spacing = 0.1, tb_spacing = 0.1, lr_spacing = 0.1, zero_centering = False, h_res:int = 500):
+        self.figure_size     = figure_size
+        self.color_map       = color_map
+        self.interp_type     = interp_type
+        self.pane_spacing    = pane_spacing
+        self.tb_spacing      = tb_spacing
+        self.lr_spacing      = lr_spacing
+        self.zero_centering  = zero_centering
+        self.h_res           = h_res
+
+        self.calculate_pane_size()
+        return
+
+    def calculate_pane_size(self):
+        self.pane_height     = (1 - (2 * self.tb_spacing + 2 * self.pane_spacing))/3
+        self.pane_width      = 1 - (2 * self.lr_spacing)
+        self.v_res           = int(self.h_res * (self.pane_height/self.pane_width) * (self.figure_size[1]/self.figure_size[0]))
+        return
+
+    def set_tb_spacing(self, new_spacing:float):
+        self.tb_spacing = new_spacing
+        self.calculate_pane_size()  
+
+    def set_lr_spacing(self, new_spacing:float):
+        self.lr_spacing = new_spacing
+        self.calculate_pane_size()    
+
+    def set_pane_spacing(self, new_spacing:float):
+        self.pane_spacing = new_spacing
+        self.calculate_pane_size() 
+
+    def set_figure_size(self, new_size:tuple):
+        self.figure_size = new_size
+        self.calculate_pane_size()    
+
+    def set_h_resolution(self, new_h_res:int):
+        self.h_res = new_h_res
+        self.calculate_pane_size()    
+
 
 ###### --- Functions --- #####
 
@@ -28,14 +69,13 @@ def create_dyn_sys(z, tf_func):
     tf_msd = signal.TransferFunction(Num, Den)
     return tf_msd
 
-def create_time_phase_damp_linspaces(h_res:int, v_ratio, num_oscillations:int, freq_limits:tuple, damping_coeff_limits:tuple):
+def create_time_phase_damp_linspaces(h_res:int, v_res:int, num_oscillations:int, freq_limits:tuple, damping_coeff_limits:tuple):
     # creates sample linspaces for system responses
     # h_res[in]                = total horizontal resolution, int, used for sample time and freq linspace index lengths
     # v_res[in]                = total vertical resolution, int, used for damping coefficient linspace index length
     # num_oscillations[in]     = number of characteristic oscillations in impulse response, sets end time of impulse response 
     # freq_limits[in]
     # damping_coeff_limits[in] = damping coefficient limits, sets start and end of damping coefficients
-    v_res     = int(np.floor(h_res / v_ratio))
     t_lin     = np.linspace(0, 2 * np.pi * num_oscillations , h_res)
     w_lin     = np.linspace(freq_limits[0], freq_limits[1], h_res)
     z_lin     = np.linspace(damping_coeff_limits[0],damping_coeff_limits[1], v_res)
@@ -56,37 +96,22 @@ def generate_mag_phase_imp_arrays(tf, t_lin, w_lin, zeroed_start = True):
     return mag, phase, imp
 
 def plot_sos_heatmap(fig, mag_set, phase_set, imp_set, art_def):
-    left_coor = round((1-art_def["pane_width"])/2,                                                  2)
-    bottom_0  = round((1 - (3 * art_def["pane_aspect_ratio"] + 2 * art_def["pane_spacing"]))/2,     2)
-    bottom_1  = round(bottom_0 + art_def["pane_aspect_ratio"] + art_def["pane_spacing"],            2) 
-    bottom_2  = round(bottom_1 + art_def["pane_aspect_ratio"] + art_def["pane_spacing"],            2) 
-    bottom    = [bottom_0, bottom_1, bottom_2]
-    c_scale   = [np.max(np.abs(mag_set)), np.max(np.abs(phase_set + 90)), np.max(np.abs(imp_set))]
-    plot_set  = [mag_set, phase_set, imp_set]
 
-    ax_0 = fig.add_axes([left_coor, bottom_0, art_def["pane_width"], art_def["pane_aspect_ratio"]])
-    if(art_def["zero_centered"]==False):
-        ax_0.imshow(mag_set, cmap = art_def["color_map"], interpolation = art_def["interp"])
-    elif(art_def["zero_centered"]==True):
-        c_scale = np.max(np.abs(mag_set))
-        ax_0.imshow(mag_set, cmap = art_def["color_map"], interpolation = art_def["interp"], vmin = -c_scale, vmax = c_scale)  
-    ax_0.axis('off')
+    bottom_0    = round(art_def.tb_spacing,    3)
+    bottom_1    = round(bottom_0 + art_def.pane_height + art_def.pane_spacing,  3) 
+    bottom_2    = round(bottom_1 + art_def.pane_height + art_def.pane_spacing,  3) 
+    bottom      = [bottom_2, bottom_1, bottom_0]
+    c_scale     = [np.max(np.abs(mag_set)), np.max(np.abs(phase_set + 90)), np.max(np.abs(imp_set))]
+    plot_set    = [mag_set, phase_set, imp_set]
 
-    ax_1 = fig.add_axes([left_coor, bottom_1, art_def["pane_width"], art_def["pane_aspect_ratio"]])
-    if(art_def["zero_centered"]==False):
-        ax_1.imshow(phase_set, cmap = art_def["color_map"], interpolation = art_def["interp"])
-    elif(art_def["zero_centered"]==True):
-        c_scale = np.max(np.abs(phase_set + 90))
-        ax_1.imshow(phase_set + 90, cmap = art_def["color_map"], interpolation = art_def["interp"], vmin = -c_scale, vmax = c_scale)  
-    ax_1.axis('off')
+    for i in range(3):
+        fig.add_axes([0, bottom[i], 1, art_def.pane_height])
+        if(art_def.zero_centering==False):
+            plt.imshow(plot_set[i], cmap = art_def.color_map, interpolation = art_def.interp_type)
+        elif(art_def.zero_centering==True):
+            plt.imshow(plot_set[i], cmap = art_def.color_map, interpolation = art_def.interp_type, vmin = -c_scale[i], vmax = c_scale[i])  
+        plt.axis('off')
 
-    ax_2 = fig.add_axes([left_coor, bottom_2, art_def["pane_width"], art_def["pane_aspect_ratio"]])
-    if(art_def["zero_centered"]==False):
-        ax_2.imshow(imp_set, cmap = art_def["color_map"], interpolation = art_def["interp"])
-    elif(art_def["zero_centered"]==True):
-        c_scale = np.max(np.abs(imp_set))
-        ax_2.imshow(imp_set, cmap = art_def["color_map"], interpolation = art_def["interp"], vmin = -c_scale, vmax = c_scale)       
-    ax_2.axis('off')
     return
 
 def plot_line_graph_output(out_set, x_lin, idx):
@@ -140,40 +165,27 @@ def custom_tf_1(z):
  
 ##### --- Parameters --- #####
 
-# #unit_SOS
-# h_res                = 1000
-# v_ratio              = 5
-# num_oscillations     = 3
-# tf_type              = unit_SOS_tf
-# freq_limits          = (0, 2.9)
-# damping_coeff_limits = (0.08, 1)
-# color_map            = 'RdBu'
-# interp               = 'bicubic'
-# zero_centered_imp    = False
 
 #unit_SOS
-h_res                = 1000
-v_ratio              = 5
-tf_type              = unit_bpf
-num_oscillations     = 1
-freq_limits          = (0, 5)
-damping_coeff_limits = (2, 2)
-color_map            = 'RdBu'
-interp               = 'bicubic'
-zero_centered_imp    = False
-art_def              = {
-                        "color_map"         : 'RdBu',
-                        "interp"            : 'bicubic',
-                        "pane_width"        : 0.9,
-                        "pane_aspect_ratio" : 1/v_ratio,
-                        "pane_spacing"      : 0.3,
-                        "zero_centered"     : False
-                       } 
+
+tf_type              = unit_SOS_tf
+num_oscillations     = 3
+freq_limits          = (0, 2.9)
+damping_coeff_limits = (0.08, 1)
+
+art_def = art_definitions()
+art_def.color_map = 'RdBu'
+art_def.interp_type = 'bicubic'
+art_def.set_lr_spacing(0.01)
+art_def.set_tb_spacing(0.01)
+art_def.set_figure_size((15,10))
+art_def.set_pane_spacing(0.01)
+art_def.set_h_resolution(1000)
 
 
 ##### --- Maths --- #####
 
-t_lin, w_lin, z_lin  = create_time_phase_damp_linspaces(h_res, v_ratio, num_oscillations, freq_limits, damping_coeff_limits) 
+t_lin, w_lin, z_lin  = create_time_phase_damp_linspaces(art_def.h_res, art_def.v_res, num_oscillations, freq_limits, damping_coeff_limits) 
 
 for idx, z in enumerate(z_lin):
     tf_msd          = create_dyn_sys(z, tf_type)
@@ -189,7 +201,7 @@ for idx, z in enumerate(z_lin):
 
 ##### --- Plotting --- #####
 
-art_fig = plt.figure()
+art_fig = plt.figure(figsize=art_def.figure_size)
 
 plot_sos_heatmap(art_fig, mag_set, phase_set, imp_set, art_def)
 # plot_all_line_graph(mag_set, phase_set, imp_set, w_lin, t_lin, 1)
