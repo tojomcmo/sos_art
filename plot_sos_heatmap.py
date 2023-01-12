@@ -1,53 +1,35 @@
 from scipy import signal
-import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.signal import impulse as impulseResponse
-from scipy.signal import bode as bode
-import control as control
+# 
 
-class triptic_dyn_heatmap(object):
+class triptych_dyn_heatmap(object):
 
-    def __init__(self, color_map = 'RdBu', interp_type = 'bicubic', pane_spacing = 0.1, tb_spacing = 0.1, lr_spacing = 0.1, zero_centering = False, h_res:int = 500, figure_size = (12,10)):
+    def __init__(self,    color_map = 'RdBu', 
+                        interp_type = 'bicubic', 
+                       pane_spacing = 0.075,     
+                         tb_margins = 0.1, 
+                         lr_margins = 0.125,
+                     zero_centering = False, 
+                          h_res:int = 500,    
+                        figure_size = (12,9)):
 
         self.color_map       = color_map
         self.interp_type     = interp_type
         self.pane_spacing    = pane_spacing
-        self.tb_spacing      = tb_spacing
-        self.lr_spacing      = lr_spacing
+        self.tb_margins      = tb_margins
+        self.lr_margins      = lr_margins
         self.zero_centering  = zero_centering
         self.h_res           = h_res
         self.figure_size     = figure_size
-
-        self.calculate_pane_size()
         return
 
     def calculate_pane_size(self):
-        self.pane_height     = (1 - (2 * self.tb_spacing + 2 * self.pane_spacing))/3
-        self.pane_width      = 1 - (2 * self.lr_spacing)
+        self.pane_height     = (1 - (2 * self.tb_margins + 2 * self.pane_spacing))/3
+        self.pane_width      = 1 - (2 * self.lr_margins)
         self.v_res           = int(self.h_res * (self.pane_height/self.pane_width) * (self.figure_size[1]/self.figure_size[0]))
         return
-
-    def set_tb_spacing(self, new_spacing:float):
-        self.tb_spacing = new_spacing
-        self.calculate_pane_size()  
-
-    def set_lr_spacing(self, new_spacing:float):
-        self.lr_spacing = new_spacing
-        self.calculate_pane_size()    
-
-    def set_pane_spacing(self, new_spacing:float):
-        self.pane_spacing = new_spacing
-        self.calculate_pane_size() 
-
-    def set_figure_size(self, new_size:tuple):
-        self.figure_size = new_size
-        self.calculate_pane_size()    
-
-    def set_h_res(self, new_h_res:int):
-        self.h_res = new_h_res
-        self.calculate_pane_size()    
-
+ 
     def create_dyn_sys(self, z, tf_func):
     #   generates a second order transfer function of a linear mass spring damper system of unit mass and spring constant, given damping coefficient
     #   parameters: 
@@ -60,7 +42,7 @@ class triptic_dyn_heatmap(object):
     def plot_triptic_heatmap(self):
 
         self.triptic_heatmap = plt.figure(figsize=self.figure_size)
-        bottom_0    = round(self.tb_spacing,    3)
+        bottom_0    = round(self.tb_margins,    3)
         bottom_1    = round(bottom_0 + self.pane_height + self.pane_spacing,  3) 
         bottom_2    = round(bottom_1 + self.pane_height + self.pane_spacing,  3) 
         bottom      = [bottom_2, bottom_1, bottom_0]
@@ -75,9 +57,14 @@ class triptic_dyn_heatmap(object):
 
         return    
 
-class SOS_triptic_dyn_heatmap(triptic_dyn_heatmap):
+class SOS_triptych_dyn_heatmap(triptych_dyn_heatmap):
 
-    def __init__(self, num_oscillations = 1.45, freq_limits = (0, 2.9), damping_coeff_limits = (0.08, 1), temporal_type = "impulse", zeroed_start = True):
+    def __init__(self, num_oscillations = 1.48, 
+                            freq_limits = (0, 3), 
+                   damping_coeff_limits = (0.08, 1), 
+                          temporal_type = "impulse", 
+                           zeroed_start = True):
+
         super().__init__()
         self.num_oscillations     = num_oscillations
         self.freq_limits          = freq_limits
@@ -117,8 +104,12 @@ class SOS_triptic_dyn_heatmap(triptic_dyn_heatmap):
 
     def generate_mag_phase_imp_arrays(self, tf):
         _, mag, phase = signal.bode(tf, self.w_lin)
-        _, imp        = signal.impulse2(tf, X0 = None, T = self.t_lin)
-    #   _, imp        = signal.step2(tf, X0 = None, T = t_lin)
+        if(self.temporal_type=="impulse"):
+            _, imp        = signal.impulse2(tf, X0 = None, T = self.t_lin)
+        elif(self.temporal_type=="step"):
+            _, imp        = signal.step2(tf, X0 = None, T = self.t_lin)
+        else:
+            Exception("invalid time series type, must be impulse (default) or step")    
         if(self.zeroed_start == True ):
             mag   = np.array([mag   -   mag[0]])
             phase = np.array([phase - phase[0]])
@@ -130,7 +121,7 @@ class SOS_triptic_dyn_heatmap(triptic_dyn_heatmap):
         return    mag, phase, imp
 
     def sweep_heatmap_arrays(self):
-
+        self.calculate_pane_size()
         self.create_time_phase_damp_linspaces()
         for idx, z in enumerate(self.z_lin):
             tf_instance     = self.create_dyn_sys(z, self.unit_SOS_tf)
@@ -183,13 +174,14 @@ def custom_tf_1(z):
  
 ##### --- Parameters --- #####
 
-SOSart = SOS_triptic_dyn_heatmap()
-SOSart.set_figure_size((12,10))
-SOSart.set_lr_spacing(0.05)
-SOSart.set_tb_spacing(0.1)
-SOSart.set_pane_spacing(0.1)
-SOSart.set_h_res(50)
-SOSart.interp_type = 'Bicubic'
+SOSart = SOS_triptych_dyn_heatmap()
+# SOSart.figure_size   = (9,9)
+# SOSart.lr_margins    = 0.01
+# SOSart.tb_margins    = 0.01
+# SOSart.pane_spacing  = 0.01
+# SOSart.h_res         = 500
+# SOSart.interp_type   = None
+# SOSart.color_map     = 'Pastel1'
 
 SOSart.sweep_heatmap_arrays()
 SOSart.plot_triptic_heatmap()
