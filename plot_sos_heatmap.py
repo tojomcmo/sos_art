@@ -25,8 +25,6 @@ class triptic_dyn_heatmap(object):
     def calculate_pane_size(self):
         self.pane_height     = (1 - (2 * self.tb_spacing + 2 * self.pane_spacing))/3
         self.pane_width      = 1 - (2 * self.lr_spacing)
-        print(self.figure_size)
-        print(self.pane_spacing)
         self.v_res           = int(self.h_res * (self.pane_height/self.pane_width) * (self.figure_size[1]/self.figure_size[0]))
         return
 
@@ -187,7 +185,7 @@ def custom_tf_1(z):
 
 SOSart = SOS_triptic_dyn_heatmap()
 SOSart.set_figure_size((12,10))
-SOSart.set_lr_spacing(0.15)
+SOSart.set_lr_spacing(0.05)
 SOSart.set_tb_spacing(0.1)
 SOSart.set_pane_spacing(0.1)
 SOSart.set_h_res(50)
