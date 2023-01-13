@@ -1,18 +1,19 @@
 from scipy import signal
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
 # 
 
 class triptych_dyn_heatmap(object):
 
     def __init__(self,    color_map = 'RdBu', 
                         interp_type = 'bicubic', 
-                       pane_spacing = 0.075,     
-                         tb_margins = 0.1, 
-                         lr_margins = 0.125,
+                       pane_spacing = 0.05,     
+                         tb_margins = 0.05, 
+                         lr_margins = 0.05,
                      zero_centering = False, 
                           h_res:int = 500,    
-                        figure_size = (12,9)):
+                        figure_size = (12,10)):
 
         self.color_map       = color_map
         self.interp_type     = interp_type
@@ -39,9 +40,9 @@ class triptych_dyn_heatmap(object):
         tf_instance = signal.TransferFunction(Num, Den)
         return tf_instance   
 
-    def plot_triptic_heatmap(self):
+    def plot_triptic_heatmap(self, plot_name):
 
-        self.triptic_heatmap = plt.figure(figsize=self.figure_size)
+        self.triptic_heatmap = plt.figure(plot_name, figsize=self.figure_size)
         bottom_0    = round(self.tb_margins,    3)
         bottom_1    = round(bottom_0 + self.pane_height + self.pane_spacing,  3) 
         bottom_2    = round(bottom_1 + self.pane_height + self.pane_spacing,  3) 
@@ -59,57 +60,50 @@ class triptych_dyn_heatmap(object):
 
 class SOS_triptych_dyn_heatmap(triptych_dyn_heatmap):
 
-    def __init__(self, num_oscillations = 1.48, 
-                            freq_limits = (0, 3), 
-                   damping_coeff_limits = (0.08, 1), 
+    def __init__(self, dyn_function,
+                            time_limits = (0.15, 1.46 * 2 * np.pi), 
+                            freq_limits = (0, 3.1), 
+                   damping_coeff_limits = (0.1, 1), 
                           temporal_type = "impulse", 
                            zeroed_start = True):
+                        
 
         super().__init__()
-        self.num_oscillations     = num_oscillations
+        self.time_limits          = time_limits
         self.freq_limits          = freq_limits
         self.damping_coeff_limits = damping_coeff_limits
         self.temporal_type        = temporal_type
         self.zeroed_start         = zeroed_start
+        self.dyn_function         = dyn_function
 
+        self.time_step       = (self.time_limits[1] - self.time_limits[0])/self.h_res
+        self.time_pad_idx    = int(self.time_limits[0] / self.time_step)
         return
 
     def create_time_phase_damp_linspaces(self):
         # creates sample linspaces for system responses
         # h_res[in]                = total horizontal resolution, int, used for sample time and freq linspace index lengths
         # v_res[in]                = total vertical resolution, int, used for damping coefficient linspace index length
-        # num_oscillations[in]     = number of characteristic oscillations in impulse response, sets end time of impulse response 
+        # time_limits[in]     = number of characteristic oscillations in impulse response, sets end time of impulse response 
         # freq_limits[in]
         # damping_coeff_limits[in] = damping coefficient limits, sets start and end of damping coefficients
-        self.t_lin     = np.linspace(0, 2 * np.pi * self.num_oscillations , self.h_res)
+ 
+        t_step = (self.time_limits[1] - self.time_limits[0])/self.h_res
+        self.t_lin     = np.linspace(self.time_limits[0], self.time_limits[1] , self.h_res)
+        self.t_sim     = np.linspace(0, self.time_limits[1], self.h_res + self.time_pad_idx)
         self.w_lin     = np.linspace(self.freq_limits[0], self.freq_limits[1], self.h_res)
         self.z_lin     = np.linspace(self.damping_coeff_limits[0],self.damping_coeff_limits[1], self.v_res)
         return 
 
-    def unit_SOS_tf(self, z):
-    #   mass spring damper TF: H(s) = 1 / (m*s^2 + b*s + k)
-    #   w_n = sqrt(k/m) 
-    #   z   = b / (2*sqrt(km))
-    #
-    #   define m as 1, w_n as 1, z as input
-    #   m = 1
-    #   k = m * w_n^2 = 1
-    #   b = 2 * z sqrt(w_n * m) = 2 * z
-        m    = 1
-        k    = 1
-        b    = 2 * z
-        Num  = [1]
-        Den  = [m, b, k]
-        return Num, Den   
-
     def generate_mag_phase_imp_arrays(self, tf):
         _, mag, phase = signal.bode(tf, self.w_lin)
         if(self.temporal_type=="impulse"):
-            _, imp        = signal.impulse2(tf, X0 = None, T = self.t_lin)
+            _, imp    = signal.impulse2(tf, X0 = None, T = self.t_sim)
         elif(self.temporal_type=="step"):
-            _, imp        = signal.step2(tf, X0 = None, T = self.t_lin)
+            _, imp    = signal.step2(tf, X0 = None, T = self.t_sim)
         else:
             Exception("invalid time series type, must be impulse (default) or step")    
+        imp = imp[self.time_pad_idx:]
         if(self.zeroed_start == True ):
             mag   = np.array([mag   -   mag[0]])
             phase = np.array([phase - phase[0]])
@@ -124,7 +118,7 @@ class SOS_triptych_dyn_heatmap(triptych_dyn_heatmap):
         self.calculate_pane_size()
         self.create_time_phase_damp_linspaces()
         for idx, z in enumerate(self.z_lin):
-            tf_instance     = self.create_dyn_sys(z, self.unit_SOS_tf)
+            tf_instance     = self.create_dyn_sys(z, self.dyn_function)
             mag, phase, imp = self.generate_mag_phase_imp_arrays(tf_instance) 
             if (idx == 0):
                 mag_set   = mag
@@ -134,10 +128,11 @@ class SOS_triptych_dyn_heatmap(triptych_dyn_heatmap):
                 mag_set   = np.append(mag_set,   mag,   axis=0) 
                 phase_set = np.append(phase_set, phase, axis=0) 
                 imp_set   = np.append(imp_set,   imp,   axis=0) 
-        self.plot_set = [mag_set, phase_set+90, imp_set]   
+        self.plot_set = [mag_set, phase_set + 90, imp_set]   
         return
 
-    def plot_all_line_graph(self, loc):
+    def plot_all_line_graph(self, plot_name, loc):
+        self.all_line_graph = plt.figure(plot_name)
         idx       = int(len(self.plot_set[0])*loc) 
         if(idx>=len(self.plot_set[0])):
             idx = len(self.plot_set[0])-1
@@ -147,9 +142,23 @@ class SOS_triptych_dyn_heatmap(triptych_dyn_heatmap):
         plt.plot(self.w_lin.T, self.plot_set[1][idx])
         plt.subplot(3,1,3)
         plt.plot(self.t_lin.T, self.plot_set[2][idx])
-        plt.show()
 
 
+def unit_SOS_tf(z):
+#   mass spring damper TF: H(s) = 1 / (m*s^2 + b*s + k)
+#   w_n = sqrt(k/m) 
+#   z   = b / (2*sqrt(km))
+#
+#   define m as 1, w_n as 1, z as input
+#   m = 1
+#   k = m * w_n^2 = 1
+#   b = 2 * z sqrt(w_n * m) = 2 * z
+    m    = 1
+    k    = 1
+    b    = 2 * z
+    Num  = [1]
+    Den  = [m, b, k]
+    return Num, Den   
 
 def unit_lpf(z):
     Num = [z]
@@ -157,12 +166,12 @@ def unit_lpf(z):
     return Num, Den
 
 def unit_hpf(z):
-    Num = [1, 0.0001]
+    Num = [1, 0.00001]
     Den = [1, 1/z]
     return Num, Den
 
 def unit_bpf(z):
-    Num = [z, 0.0001]
+    Num = [z, 0.00001]
     Den = [1, 2*z, 1]
     return Num, Den    
 
@@ -170,19 +179,3 @@ def custom_tf_1(z):
     Num = [z, 1]
     Den = [1, z**2, 2]
     return Num, Den
-
- 
-##### --- Parameters --- #####
-
-SOSart = SOS_triptych_dyn_heatmap()
-# SOSart.figure_size   = (9,9)
-# SOSart.lr_margins    = 0.01
-# SOSart.tb_margins    = 0.01
-# SOSart.pane_spacing  = 0.01
-# SOSart.h_res         = 500
-# SOSart.interp_type   = None
-# SOSart.color_map     = 'Pastel1'
-
-SOSart.sweep_heatmap_arrays()
-SOSart.plot_triptic_heatmap()
-plt.show()
