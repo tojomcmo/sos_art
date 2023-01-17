@@ -1,7 +1,6 @@
 from scipy import signal
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap
 # 
 
 class triptych_dyn_heatmap(object):
@@ -11,24 +10,43 @@ class triptych_dyn_heatmap(object):
                        pane_spacing = 0.05,     
                          tb_margins = 0.05, 
                          lr_margins = 0.05,
-                     zero_centering = False, 
-                          h_res:int = 500,    
-                        figure_size = (12,10)):
+                     cmap_centering = False, 
+                          h_res:int = 500,
+                      discrete_cmap = False,
+                  num_discrete_cmap = 10,
+                          shape_def = 'fig_size',    
+                              shape = (10,12)):
 
-        self.color_map       = color_map
-        self.interp_type     = interp_type
-        self.pane_spacing    = pane_spacing
-        self.tb_margins      = tb_margins
-        self.lr_margins      = lr_margins
-        self.zero_centering  = zero_centering
-        self.h_res           = h_res
-        self.figure_size     = figure_size
+        self.color_map          = color_map
+        self.interp_type        = interp_type
+        self.pane_spacing       = pane_spacing
+        self.tb_margins         = tb_margins
+        self.lr_margins         = lr_margins
+        self.cmap_centering     = cmap_centering
+        self.h_res              = h_res
+        self.discrete_cmap      = discrete_cmap
+        self.num_discrete_cmap  = num_discrete_cmap
+        self.shape_def          = shape_def   
+        self.shape              = shape
+    
         return
 
     def calculate_pane_size(self):
-        self.pane_height     = (1 - (2 * self.tb_margins + 2 * self.pane_spacing))/3
-        self.pane_width      = 1 - (2 * self.lr_margins)
-        self.v_res           = int(self.h_res * (self.pane_height/self.pane_width) * (self.figure_size[1]/self.figure_size[0]))
+        self.fig_height      = self.shape[0]
+        self.fig_width       = self.shape[1]        
+        self.pane_height     = (1 - (2 * self.tb_margins + 2 * self.pane_spacing))/3 * self.fig_height
+        self.pane_width      = (1 - (2 * self.lr_margins)) * self.fig_width      
+        self.v_res           = int(self.h_res * (self.pane_height/self.pane_width) * (self.fig_width/self.fig_height))
+        return
+
+    def calculate_fig_size(self):
+        fig_width_ref       = 12
+        self.pane_width      = fig_width_ref * (1 - (2 * self.lr_margins))
+        self.pane_height     = self.pane_width * self.shape[0] / self.shape[1]
+
+        self.fig_width       = fig_width_ref
+        self.fig_height      = (3 * self.pane_height) / (1 - 2 * (self.tb_margins + self.pane_spacing))    
+        self.v_res           = int(self.h_res * (self.pane_height/self.pane_width))
         return
  
     def create_dyn_sys(self, z, tf_func):
@@ -40,19 +58,31 @@ class triptych_dyn_heatmap(object):
         tf_instance = signal.TransferFunction(Num, Den)
         return tf_instance   
 
-    def plot_triptic_heatmap(self, plot_name):
+    def discretize_plot_set(self):
+        for idplot in range(3):
+            self.plot_set[idplot] = self.plot_set[idplot] - np.min(self.plot_set[idplot])
+            step_size = (np.max(self.plot_set[idplot])) / self.num_discrete_cmap
+            for idrow, row in enumerate(self.plot_set[idplot]):
+                for idcol, element in enumerate(row):
+                    cmap_bin = np.floor(element / step_size)
+                    self.plot_set[idplot][idrow][idcol] = cmap_bin * step_size
+        return
 
-        self.triptic_heatmap = plt.figure(plot_name, figsize=self.figure_size)
+    def plot_triptic_heatmap(self, plot_name):
+        if(self.discrete_cmap == True):
+            self.discretize_plot_set()
+
+        self.triptic_heatmap = plt.figure(plot_name, figsize=(self.fig_width, self.fig_height))
         bottom_0    = round(self.tb_margins,    3)
-        bottom_1    = round(bottom_0 + self.pane_height + self.pane_spacing,  3) 
-        bottom_2    = round(bottom_1 + self.pane_height + self.pane_spacing,  3) 
+        bottom_1    = round(bottom_0 + self.pane_height/self.fig_height + self.pane_spacing,  3) 
+        bottom_2    = round(bottom_1 + self.pane_height/self.fig_height + self.pane_spacing,  3) 
         bottom      = [bottom_2, bottom_1, bottom_0]
         c_scale     = [np.max(np.abs(self.plot_set[0])), np.max(np.abs(self.plot_set[1])), np.max(np.abs(self.plot_set[2]))]
         for i in range(3):
-            self.triptic_heatmap.add_axes([0, bottom[i], 1, self.pane_height])
-            if(self.zero_centering==False):
+            self.triptic_heatmap.add_axes([0, bottom[i], 1, self.pane_height/self.fig_height])
+            if(self.cmap_centering==False):
                 plt.imshow(self.plot_set[i], cmap = self.color_map, interpolation = self.interp_type)
-            elif(self.zero_centering==True):
+            elif(self.cmap_centering==True):
                 plt.imshow(self.plot_set[i], cmap = self.color_map, interpolation = self.interp_type, vmin = -c_scale[i], vmax = c_scale[i])  
             plt.axis('off')
 
@@ -61,11 +91,11 @@ class triptych_dyn_heatmap(object):
 class SOS_triptych_dyn_heatmap(triptych_dyn_heatmap):
 
     def __init__(self, dyn_function,
-                            time_limits = (0.15, 1.46 * 2 * np.pi), 
+                            time_limits = (0.75, 1.46 * 2 * np.pi), 
                             freq_limits = (0, 3.1), 
-                   damping_coeff_limits = (0.1, 1), 
+                   damping_coeff_limits = (0.1, 1.3), 
                           temporal_type = "impulse", 
-                           zeroed_start = True):
+                           zeroed_start = False):
                         
 
         super().__init__()
@@ -115,7 +145,13 @@ class SOS_triptych_dyn_heatmap(triptych_dyn_heatmap):
         return    mag, phase, imp
 
     def sweep_heatmap_arrays(self):
-        self.calculate_pane_size()
+        if(self.shape_def == 'fig_size'):
+            self.calculate_pane_size()
+        elif(self.shape_def == 'pane_size'):   
+            self.calculate_fig_size()
+        else:
+            Exception('imvalid shape_def, must be fig_size or pane_size' )    
+
         self.create_time_phase_damp_linspaces()
         for idx, z in enumerate(self.z_lin):
             tf_instance     = self.create_dyn_sys(z, self.dyn_function)
@@ -128,7 +164,8 @@ class SOS_triptych_dyn_heatmap(triptych_dyn_heatmap):
                 mag_set   = np.append(mag_set,   mag,   axis=0) 
                 phase_set = np.append(phase_set, phase, axis=0) 
                 imp_set   = np.append(imp_set,   imp,   axis=0) 
-        self.plot_set = [mag_set, phase_set + 90, imp_set]   
+        self.data_set = [mag_set, phase_set, imp_set]
+        self.plot_set = self.data_set   
         return
 
     def plot_all_line_graph(self, plot_name, loc):
