@@ -15,12 +15,12 @@ SOSart = tript.SOS_triptych_dyn_heatmap(tript.unit_SOS_tf)
 # SOSart.pane_spacing  = 0.01
 # SOSart.interp_type   = None
 # SOSart.color_map     = 'coolwarm'
-# SOSart.color_map     = cmocean.tools.lighten(cmocean.cm.tarn, 1.0)
+# SOSart.color_map     = cmocean.tools.lighten(cmocean.cm.matter, 1.0)
 
-SOSart.h_res         = 2000
-SOSart.shape_def     = 'pane_size'
-SOSart.shape         = (1,4)
-SOSart.discrete_cmap = True
+SOSart.h_res             = 2000
+SOSart.shape_def         = 'pane_size'
+SOSart.shape             = (1,4)
+SOSart.discrete_cmap     = True
 SOSart.num_discrete_cmap = 11
 
 # SOSart.temporal_type = 'step'

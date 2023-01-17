@@ -28,7 +28,7 @@ class triptych_dyn_heatmap(object):
         self.num_discrete_cmap  = num_discrete_cmap
         self.shape_def          = shape_def   
         self.shape              = shape
-    
+
         return
 
     def calculate_pane_size(self):
@@ -40,10 +40,9 @@ class triptych_dyn_heatmap(object):
         return
 
     def calculate_fig_size(self):
-        fig_width_ref       = 12
+        fig_width_ref        = 12
         self.pane_width      = fig_width_ref * (1 - (2 * self.lr_margins))
         self.pane_height     = self.pane_width * self.shape[0] / self.shape[1]
-
         self.fig_width       = fig_width_ref
         self.fig_height      = (3 * self.pane_height) / (1 - 2 * (self.tb_margins + self.pane_spacing))    
         self.v_res           = int(self.h_res * (self.pane_height/self.pane_width))
@@ -64,13 +63,13 @@ class triptych_dyn_heatmap(object):
             step_size = (np.max(self.plot_set[idplot])) / self.num_discrete_cmap
             for idrow, row in enumerate(self.plot_set[idplot]):
                 for idcol, element in enumerate(row):
-                    cmap_bin = np.floor(element / step_size)
-                    self.plot_set[idplot][idrow][idcol] = cmap_bin * step_size
+                    snapped_value = np.floor(element / step_size) * step_size
+                    self.plot_set[idplot][idrow][idcol] = snapped_value
         return
 
     def plot_triptic_heatmap(self, plot_name):
         if(self.discrete_cmap == True):
-            self.discretize_plot_set()
+            self.discretize_plot_set()    
 
         self.triptic_heatmap = plt.figure(plot_name, figsize=(self.fig_width, self.fig_height))
         bottom_0    = round(self.tb_margins,    3)
@@ -114,11 +113,11 @@ class SOS_triptych_dyn_heatmap(triptych_dyn_heatmap):
         # creates sample linspaces for system responses
         # h_res[in]                = total horizontal resolution, int, used for sample time and freq linspace index lengths
         # v_res[in]                = total vertical resolution, int, used for damping coefficient linspace index length
-        # time_limits[in]     = number of characteristic oscillations in impulse response, sets end time of impulse response 
+        # time_limits[in]          = number of characteristic oscillations in impulse response, sets end time of impulse response 
         # freq_limits[in]
         # damping_coeff_limits[in] = damping coefficient limits, sets start and end of damping coefficients
- 
-        t_step = (self.time_limits[1] - self.time_limits[0])/self.h_res
+
+
         self.t_lin     = np.linspace(self.time_limits[0], self.time_limits[1] , self.h_res)
         self.t_sim     = np.linspace(0, self.time_limits[1], self.h_res + self.time_pad_idx)
         self.w_lin     = np.linspace(self.freq_limits[0], self.freq_limits[1], self.h_res)
@@ -179,7 +178,7 @@ class SOS_triptych_dyn_heatmap(triptych_dyn_heatmap):
         plt.plot(self.w_lin.T, self.plot_set[1][idx])
         plt.subplot(3,1,3)
         plt.plot(self.t_lin.T, self.plot_set[2][idx])
-
+        return
 
 def unit_SOS_tf(z):
 #   mass spring damper TF: H(s) = 1 / (m*s^2 + b*s + k)
