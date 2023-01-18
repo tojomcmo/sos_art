@@ -15,7 +15,8 @@ class triptych_dyn_heatmap(object):
                       discrete_cmap = False,
                   num_discrete_cmap = 10,
                           shape_def = 'fig_size',    
-                              shape = (10,12)):
+                              shape = (10,12),
+                      fig_width_ref = 9):
 
         self.color_map          = color_map
         self.interp_type        = interp_type
@@ -28,6 +29,7 @@ class triptych_dyn_heatmap(object):
         self.num_discrete_cmap  = num_discrete_cmap
         self.shape_def          = shape_def   
         self.shape              = shape
+        self.fig_width_ref      = fig_width_ref
 
         return
 
@@ -40,10 +42,9 @@ class triptych_dyn_heatmap(object):
         return
 
     def calculate_fig_size(self):
-        fig_width_ref        = 12
-        self.pane_width      = fig_width_ref * (1 - (2 * self.lr_margins))
+        self.pane_width      = self.fig_width_ref * (1 - (2 * self.lr_margins))
         self.pane_height     = self.pane_width * self.shape[0] / self.shape[1]
-        self.fig_width       = fig_width_ref
+        self.fig_width       = self.fig_width_ref
         self.fig_height      = (3 * self.pane_height) / (1 - 2 * (self.tb_margins + self.pane_spacing))    
         self.v_res           = int(self.h_res * (self.pane_height/self.pane_width))
         return
