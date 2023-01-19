@@ -1,6 +1,7 @@
 from scipy import signal
 import numpy as np
 import matplotlib.pyplot as plt
+import control
 # 
 
 class triptych_dyn_heatmap(object):
@@ -16,7 +17,7 @@ class triptych_dyn_heatmap(object):
                   num_discrete_cmap = 10,
                           shape_def = 'fig_size',    
                               shape = (10,12),
-                      fig_width_ref = 9):
+                      fig_width_ref = 10):
 
         self.color_map          = color_map
         self.interp_type        = interp_type
@@ -196,6 +197,36 @@ def unit_SOS_tf(z):
     Num  = [1]
     Den  = [m, b, k]
     return Num, Den   
+
+def two_mass_f1_to_m1_tf(z):
+
+    m1     = 1
+    m2     = 0.5
+    k1     = 1 
+    k2     = 1
+    b1     = 3 * z
+    b2     = 0.2 * z
+    input  = 1
+    output = 1
+
+    A = np.array([[0,0,1,0],
+                  [0, 0, 0, 1], 
+                  [-(k1+k2)/m1, k2/m1, -(b1+b2)/m1, b2/m1],
+                  [k2/m2, -k2/m2, b2/m2, -b2/m2]])
+    B = np.array([[0, 0],
+                  [0, 0],
+                  [1/m1, 0],
+                  [0, 1/m2]])
+    C = np.array([[1,0,0,0],
+                  [0,1,0,0]])
+    D = np.array([[0,0],[0,0]])
+
+    tf = control.ss2tf(A, B[:,input], C[output], D[output,input])
+
+    Num  = tf.num[0][0]
+    Den  = tf.den[0][0]
+    return Num, Den   
+
 
 def unit_lpf(z):
     Num = [z]
