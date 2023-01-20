@@ -7,27 +7,26 @@ import cmocean
 ##### --- Parameters --- #####
 time_start = time.time()
 
-SOSart = tript.SOS_triptych_dyn_heatmap(tript.two_mass_f1_to_m1_tf)
+SOSart = tript.SOS_triptych_dyn_heatmap(tript.unit_SOS_tf)
 
 # SOSart.shape         = (9,9)
-# SOSart.lr_margins    = 0.01
-# SOSart.tb_margins    = 0.01
+SOSart.lr_margins    = 0
+SOSart.tb_margins    = 0
 SOSart.pane_spacing  = 0.02
 # SOSart.interp_type   = None
-# SOSart.color_map     = 'coolwarm'
+# SOSart.color_map     = 'gray'
 # SOSart.color_map     = cmocean.tools.lighten(cmocean.cm.matter, 1.0)
 
-SOSart.h_res             = 2000
+SOSart.h_res             = 3000
 SOSart.shape_def         = 'pane_size'
 SOSart.shape             = (1,3)
 SOSart.discrete_cmap     = True
-SOSart.num_discrete_cmap = 12
+SOSart.num_discrete_cmap = 11
 SOSart.interp_type       = None
 
-# SOSart.temporal_type = 'step'
-SOSart.damping_coeff_limits = (0.1, 0.5)
-SOSart.time_limits = (0, 6)
-SOSart.freq_limits = (0.1,3)
+# SOSart.damping_coeff_limits = (0.15, 1)
+# SOSart.time_limits = (0, 8.5)
+# SOSart.freq_limits = (0.05,2.25)
 
 SOSart.sweep_heatmap_arrays()
 SOSart.plot_triptic_heatmap('heatmap_art')

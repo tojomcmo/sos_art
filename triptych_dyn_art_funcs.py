@@ -201,13 +201,13 @@ def unit_SOS_tf(z):
 def two_mass_f1_to_m1_tf(z):
 
     m1     = 1
-    m2     = 0.5
+    m2     = 1
     k1     = 1 
     k2     = 1
-    b1     = 3 * z
-    b2     = 0.2 * z
-    input  = 1
-    output = 1
+    b1     = 2 * z
+    b2     = 1 * z
+    input  = 0
+    output = 0
 
     A = np.array([[0,0,1,0],
                   [0, 0, 0, 1], 
