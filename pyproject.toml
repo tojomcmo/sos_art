@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "sos-art"
+version = "0.1.0"
+description = "Project for creating graphic art from varied parameter dynamic systems"
+authors = ["Thomas Moriarty <tojomcmo@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+numpy = "^2.0.1"
+matplotlib = "^3.9.1"
+scipy = "^1.14.0"
+control = "^0.10.0"
+
+
+[tool.poetry.group.dev.dependencies]
+black = "^24.4.2"
+flake8 = "^7.1.0"
+mypy = "^1.10.0"
+
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
