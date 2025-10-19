@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import control
 from typing import Optional
+from matplotlib.colors import LinearSegmentedColormap
 
 
 class triptych_dyn_heatmap(object):
