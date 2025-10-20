@@ -1,57 +1,73 @@
-import src.triptych_dyn_art_funcs as tript
-import numpy as np
-from matplotlib import pyplot as plt
+# make_art.py
 import time
+import numpy as np
+import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 
-##### --- Parameters --- #####
-time_start = time.time()
+import src.triptych_dyn_art_funcs as tript
 
 
-SOSart = tript.SOS_triptych_dyn_heatmap(tript.unit_SOS_tf)
+def main():
+    time_start = time.time()
 
-# Color map definition
-# colors = [
-#     (0.0, "green"),  # at the low end
-#     (0.5, "white"),  # midpoint
-#     (1.0, "orange"),  # at the high end
-# ]
-colors = [
-    (0.0, "#2D7432"),  # at the low end
-    (0.475, "#F4FCDB"),  # midpoint
-    (1.0, "#F37521"),  # at the high end
-]
-color_map = LinearSegmentedColormap.from_list("color_map", colors)
+    # --- Color map (green -> off-white -> burnt-orange) ---
+    colors = [
+        (0.0, "#2D7432"),
+        (0.475, "#F4FCDB"),
+        (1.0, "#F37521"),
+    ]
+    color_map = LinearSegmentedColormap.from_list("color_map", colors)
 
-# SOSart.shape         = (9,9)
-SOSart.lr_margins = 0
-SOSart.tb_margins = 0
-SOSart.pane_spacing = 0.02
-# SOSart.interp_type   = None
-# SOSart.color_map     = 'gray'
-SOSart.color_map = color_map
+    # --- Instantiate art generator (width-driven layout) ---
+    SOSart = tript.SOS_Triptych(
+        dyn_function=tript.unit_SOS_tf,  # or any of your TFs
+        size_mode="width",  # compute sizes from width + aspect
+        width_in=24,  # final figure width in inches (print target)
+        shape=(1, 3),  # pane aspect h/w
+        lr_margins=0.0,
+        tb_margins=0.0,
+        pane_spacing=0.02,
+        h_res=1000,  # horizontal resolution
+        discrete_cmap=True,
+        num_discrete_cmap=31,
+        interp_type=None,  # no smoothing between cells
+        color_map=color_map,
+        cmap_centering=False,  # or True to force symmetric color scaling per pane
+        damping_coeff_limits=(0.1, 1.3),
+        # You can tweak time/freq limits if desired:
+        # time_limits=(0.0, 8.5),
+        # freq_limits=(0.0, 4.0),
+    )
+
+    # --- Generate data and plot triptych ---
+    SOSart.sweep_heatmap_arrays()
+    fig, axes, ims = SOSart.plot_triptych_heatmap("heatmap_art")
+
+    # --- Save print-ready triptych (24 in wide, 600 dpi, lossless) ---
+    fig.savefig(
+        "triptych_art_24in.tif",
+        dpi=600,
+        bbox_inches="tight",
+        pad_inches=0,
+        pil_kwargs={"compression": "tiff_lzw"},
+    )
+    plt.close(fig)
+
+    # (Optional) Save each pane individually at 24 inches wide:
+    SOSart.save_all_panes(
+        out_pattern="pane_{i}_24in.tif",
+        width_in=24,
+        dpi=600,
+        pil_kwargs={"compression": "tiff_lzw"},
+    )
+
+    # (Optional) Quick screen preview of a single pane with a colorbar:
+    fig_p, ax_p, _ = SOSart.plot_pane(0, width_in=8, with_colorbar=True)
+    plt.show()
+
+    elapsed = time.time() - time_start
+    print(f"Total time: {elapsed:.2f}s")
 
 
-SOSart.h_res = 1000
-SOSart.shape_def = "pane_size"
-SOSart.shape = (1, 3)
-SOSart.discrete_cmap = True
-SOSart.num_discrete_cmap = 31
-SOSart.interp_type = None
-
-SOSart.damping_coeff_limits = (0.1, 1.3)
-# SOSart.time_limits = (0, 8.5)
-# SOSart.freq_limits = (0.0, 4)
-
-#### generate heatmaps ####
-SOSart.sweep_heatmap_arrays()
-
-#### Plot art ####
-SOSart.plot_triptic_heatmap("heatmap_art")
-#### Show individual slice  ####
-# SOSart.plot_all_line_graph('line_graph', 0.1)
-
-time_end = time.time() - time_start
-print("total time: ", round(time_end, 2))
-
-plt.show()
+if __name__ == "__main__":
+    main()
